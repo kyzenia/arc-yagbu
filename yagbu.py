@@ -1,3 +1,7 @@
+import random
+from pathlib import Path
+from itertools import cycle
+
 def main():
     main_menu()
     main_menu_selection()
@@ -5,7 +9,7 @@ def main():
 def main_menu():
     print("\n# # # # # # # # # # # # # # # # # # # # # # # # # # # # #")
     print("#                                                       #")
-    print("#                      Yagbu v0.1.0                     #")
+    print("#                      Yagbu v0.2.0                     #")
     print("#                                                       #")
     print("#   Please select among available options below (1-3):  #")
     print("#                                                       #")
@@ -44,17 +48,16 @@ def main_menu_selection():
                         print("\nFile not found! Check the file name.\n")
                         loopF = 1
                 userSeed = int(input("Enter your seed (integer): "))
-                uKey = int(input("Enter your key (positive integer): "))
+                userKey = int(input("Enter your key (positive integer): "))
             except:
                 print("\nPlease enter a valid seed/key!")
                 loop2 = 1
             else:
-                if uKey < 0:
-                    uKey = (uKey * (-1))
-                uKey = str(uKey)
-                userKey = [num for num in uKey]
+                if userKey < 0:
+                    userKey = (userKey * (-1))
+                userKey = [int(i) for i in str(userKey)]
                 loop2 = 0
-        encrypt_decrypt_handler(readFile(userFile), userKey, userSeed, userChoice, userFile)
+        encrypt_decrypt_handler(read_file(userFile), userKey, userSeed, userChoice, userFile)
     elif userChoice == 2:
         while loop3 == 1:
             try:
@@ -68,17 +71,16 @@ def main_menu_selection():
                         print("\nFile not found! Check the file name.\n")
                         loopF = 1
                 userSeed = int(input("Enter your seed (integer): "))
-                uKey = int(input("Enter your key (positive integer): "))
+                userKey = int(input("Enter your key (positive integer): "))
             except:
                 print("\nPlease enter a valid seed/key!")
                 loop3 = 1
             else:
-                if uKey < 0:
-                    uKey = (uKey * (-1))
-                uKey = str(uKey)
-                userKey = [num for num in uKey]
+                if userKey < 0:
+                    userKey = (userKey * (-1))
+                userKey = [int(i) for i in str(userKey)]
                 loop3 = 0
-        encrypt_decrypt_handler(readFile(userFile), userKey, userSeed, userChoice, userFile)
+        encrypt_decrypt_handler(read_file(userFile), userKey, userSeed, userChoice, userFile)
     else:
         credits()
         input("Have a great day!\nPlease press enter to exit the program...")
@@ -87,87 +89,50 @@ def encrypt_decrypt_handler(data, userKey, userSeed, userChoice, userFile):
     if userChoice == 1:
         alfabetas, rev_alfabetas = key_gen(userSeed)
         encrypt(userKey, alfabetas, rev_alfabetas, data, userFile)
-        print(f'''\nEncryption complete. Please check "{userFile}.yagbu"''')
-        main()
+        credits()
+        print(f'''Encryption complete. Please check "{userFile}.yagbu"\n''')
+        input("Have a great day! Please press enter to exit the program...")
     else:
-        list_char, list_num = assign(data, userKey)
         alfabetas, rev_alfabetas = key_gen(userSeed)
-        decrypt(list_char, list_num, alfabetas, rev_alfabetas, userFile)
-        print(f'''\nDecryption complete. Please check "{userFile.removesuffix(".yagbu")}"''')
-        main()
+        decrypt(userKey, alfabetas, rev_alfabetas, data, userFile)
+        credits()
+        print(f'''Decryption complete. Please check "{userFile.removesuffix(".yagbu")}"\n''')
+        input("Have a great day! Please press enter to exit the program...")
 
 def encrypt(userKey, alfabetas, rev_alfabetas, data, userFile):
-    data_ready, pre_list_char = [], []
-    post_list_num = assignNum(data, userKey)
-    for char in data:
-        pre_list_char.append(char)
-    for i in range(len(pre_list_char)):
-        data_ready.append(rev_alfabetas[int(post_list_num[i])][alfabetas[0].get(pre_list_char[i])])
-    data_ready = "".join(data_ready)
-    file = open(f"{userFile}.yagbu", "wb")
-    file.write(bytes.fromhex(data_ready))
-    file.close()
-    from pathlib import Path
+    data_ready = "".join(rev_alfabetas[key][alfabetas[0][char]]for char, key in zip(data, cycle(userKey)))
+    with open(f"{userFile}.yagbu", "wb") as file:
+        file.write(bytes.fromhex(data_ready))
     file = Path(userFile)
     if file.exists():
         file.unlink()
 
-def decrypt(pre_list_char, pre_list_num, alfabetas, rev_alfabetas, userFile):
-    data_ready = []
-    for i in range(len(pre_list_char)):
-        data_ready.append(rev_alfabetas[0].get(alfabetas[int(pre_list_num[i])].get(pre_list_char[i])))
-    data_ready = "".join(data_ready)
-    file = open(userFile.removesuffix(".yagbu"), "wb")
-    file.write(bytes.fromhex(data_ready))
-    file.close()
-    from pathlib import Path
+def decrypt(userKey, alfabetas, rev_alfabetas, data, userFile):
+    data_ready = "".join(rev_alfabetas[0][alfabetas[key][char]]for char, key in zip(data, cycle(userKey)))
+    with open(userFile.removesuffix(".yagbu"), "wb") as file:
+        file.write(bytes.fromhex(data_ready))
     file = Path(userFile)
     if file.exists():
         file.unlink()
 
-def readFile(userFile):
-    file = open(userFile, "rb")
-    data = file.read().hex()
-    file.close()
-    return data
-
-def assign(data, userKey):
-    from itertools import cycle
-    cycle_it = cycle(userKey)
-    list_char,list_num = [],[]
-    for char in data:
-        num = next(cycle_it)
-        list_char.append(char)
-        list_num.append(num)
-    return list_char, list_num
-
-def assignNum(data, userKey):
-    from itertools import cycle
-    cycle_it = cycle(userKey)
-    list_num = []
-    for char in data:
-        num = next(cycle_it)
-        list_num.append(num)
-    return list_num
+def read_file(userFile):
+    with open(userFile, "rb") as file:
+        return file.read().hex()
 
 def key_gen(userSeed):
-    base = '''0123456789abcdef'''
-    import random
+    base = list('''0123456789abcdef''')
     alfabetas, rev_alfabetas = [], []
-    list_char = list(base)
-    dict_alfabeta = {key: item for item, key in enumerate(list_char)}
+    dict_alfabeta = {key: item for item, key in enumerate(base)}
     alfabetas.append(dict_alfabeta)
-    rev_dict_alfabeta = {key: item for item, key in dict_alfabeta.items()}
-    rev_alfabetas.append(rev_dict_alfabeta)
+    rev_alfabetas.append({key: item for item, key in dict_alfabeta.items()})
     for i in range(9):
+        chars = base.copy()
         seedset = random.Random(int(userSeed)+i)
-        seedset.shuffle(list_char)
-        dict_alfabeta = {key: item for item, key in enumerate(list_char)}
+        seedset.shuffle(chars)
+        dict_alfabeta = {key: item for item, key in enumerate(chars)}
         alfabetas.append(dict_alfabeta)
-        rev_dict_alfabeta = {key: item for item, key in dict_alfabeta.items()}
-        rev_alfabetas.append(rev_dict_alfabeta)
-    alfabetas, rev_alfabetas = tuple(alfabetas), tuple(rev_alfabetas)
-    return alfabetas, rev_alfabetas
+        rev_alfabetas.append({key: item for item, key in dict_alfabeta.items()})
+    return tuple(alfabetas), tuple(rev_alfabetas)
 
 def credits():
     print("\n# # # # # # # # # # # # # # # # # # # # # # # # # # # # #")

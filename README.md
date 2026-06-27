@@ -1,4 +1,4 @@
-(AS for v0.1.0, Keep in mind that the performance of Yagbu is incredibly poor and resource hungry!)
+(As for v0.2.0, Keep in mind that the performance of Yagbu is poor and resource hungry!)
 
 INSTRUCTIONS:
 
