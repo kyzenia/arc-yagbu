@@ -1,15 +1,12 @@
 import random
 from pathlib import Path
 from itertools import cycle
+DATA_CHUNKS = 8 * 1024 * 1024
 
 def main():
-    main_menu()
-    main_menu_selection()
-
-def main_menu():
     print("\n# # # # # # # # # # # # # # # # # # # # # # # # # # # # #")
     print("#                                                       #")
-    print("#                      Yagbu v0.2.0                     #")
+    print("#                      Yagbu v1.0.0                     #")
     print("#                                                       #")
     print("#   Please select among available options below (1-3):  #")
     print("#                                                       #")
@@ -19,107 +16,73 @@ def main_menu():
     print("#                                                       #")
     print("# # # # # # # # # # # # # # # # # # # # # # # # # # # # #\n")
 
-def main_menu_selection():
-    loop, loop1, loop2, loop3, loopF, userChoice = 1, 1, 1, 1, 1, None
-    while loop == 1:
-        try:
-            while loop1 == 1:
-                userChoice = int(input("Your selection: "))
-                if userChoice < 1 or userChoice > 3:
-                    print("\nPlease enter a valid selection!\n")
-                    loop1 = 1
-                else:
-                    loop1 = 0
-        except:
-            print("\nPlease enter a valid selection!\n")
-            loop = 1
-        else:
-            loop = 0
-    if userChoice == 1:
-        while loop2 == 1:
-            try:
-                while loopF == 1:
-                    from pathlib import Path
-                    userFile = str(input("Enter your file's full name: ")).strip()
-                    file = Path(userFile)
-                    if file.exists():
-                        loopF = 0
-                    else:
-                        print("\nFile not found! Check the file name.\n")
-                        loopF = 1
-                userSeed = int(input("Enter your seed (integer): "))
-                userKey = int(input("Enter your key (positive integer): "))
-            except:
-                print("\nPlease enter a valid seed/key!")
-                loop2 = 1
-            else:
-                if userKey < 0:
-                    userKey = (userKey * (-1))
-                userKey = [int(i) for i in str(userKey)]
-                loop2 = 0
-        encrypt_decrypt_handler(read_file(userFile), userKey, userSeed, userChoice, userFile)
-    elif userChoice == 2:
-        while loop3 == 1:
-            try:
-                while loopF == 1:
-                    from pathlib import Path
-                    userFile = str(input("Enter your file's full name: ")).strip() + ".yagbu"
-                    file = Path(userFile)
-                    if file.exists():
-                        loopF = 0
-                    else:
-                        print("\nFile not found! Check the file name.\n")
-                        loopF = 1
-                userSeed = int(input("Enter your seed (integer): "))
-                userKey = int(input("Enter your key (positive integer): "))
-            except:
-                print("\nPlease enter a valid seed/key!")
-                loop3 = 1
-            else:
-                if userKey < 0:
-                    userKey = (userKey * (-1))
-                userKey = [int(i) for i in str(userKey)]
-                loop3 = 0
-        encrypt_decrypt_handler(read_file(userFile), userKey, userSeed, userChoice, userFile)
-    else:
+    user_choice = get_user_choice()
+    if user_choice == 3:
         credits()
         input("Have a great day!\nPlease press enter to exit the program...")
-
-def encrypt_decrypt_handler(data, userKey, userSeed, userChoice, userFile):
-    if userChoice == 1:
-        alfabetas, rev_alfabetas = key_gen(userSeed)
-        encrypt(userKey, alfabetas, rev_alfabetas, data, userFile)
+        return
+    user_file = get_user_file(choice_encrypt=(user_choice == 1))
+    user_seed, user_key = get_user_seed_and_key()
+    alfabetas, rev_alfabetas = key_gen(user_seed)
+    if user_choice == 1:
+        encrypt(user_key, alfabetas, rev_alfabetas, user_file)
         credits()
-        print(f'''Encryption complete. Please check "{userFile}.yagbu"\n''')
-        input("Have a great day! Please press enter to exit the program...")
-    else:
-        alfabetas, rev_alfabetas = key_gen(userSeed)
-        decrypt(userKey, alfabetas, rev_alfabetas, data, userFile)
+        print(f'''Encryption complete. Please check "{user_file}.yagbu"\n''')
+    elif user_choice == 2:
+        decrypt(user_key, alfabetas, rev_alfabetas, user_file)
         credits()
-        print(f'''Decryption complete. Please check "{userFile.removesuffix(".yagbu")}"\n''')
-        input("Have a great day! Please press enter to exit the program...")
+        print(f'''Decryption complete. Please check "{user_file.removesuffix(".yagbu")}"\n''')
+    input("Have a great day! Please press enter to exit the program...")
 
-def encrypt(userKey, alfabetas, rev_alfabetas, data, userFile):
-    data_ready = "".join(rev_alfabetas[key][alfabetas[0][char]]for char, key in zip(data, cycle(userKey)))
-    with open(f"{userFile}.yagbu", "wb") as file:
-        file.write(bytes.fromhex(data_ready))
-    file = Path(userFile)
+def get_user_choice():
+    while True:
+        try:
+            user_choice = int(input("Your selection: "))
+            if 1 <= user_choice <= 3:
+                return user_choice
+        except ValueError:
+            pass
+        print("\nPlease enter a valid selection!\n")
+
+def get_user_file(choice_encrypt):
+    while True:
+        user_file = input("Enter your file's full name: ").strip()
+        if not choice_encrypt:
+            user_file += ".yagbu"
+        if Path(user_file).exists():
+            return user_file
+        print("\nFile not found! Check the file name.\n")
+
+def get_user_seed_and_key():
+    while True:
+        try:
+            user_seed = int(input("Enter your seed (integer): "))
+            user_key = abs(int(input("Enter your key (positive integer): ")))
+            return user_seed, [int(i) for i in str(user_key)]
+        except ValueError:
+            print("\nPlease enter a valid seed/key!\n")
+
+def encrypt(user_key, alfabetas, rev_alfabetas, user_file):
+    key_iter = cycle(user_key)
+    with open(user_file, "rb") as file_in, open(f"{user_file}.yagbu", "wb") as file_out:
+        while data_chunk := file_in.read(DATA_CHUNKS):
+            data_ready = "".join(rev_alfabetas[key][alfabetas[0][value]]for value, key in zip(data_chunk.hex(), key_iter))
+            file_out.write(bytes.fromhex(data_ready))
+    file = Path(user_file)
     if file.exists():
         file.unlink()
 
-def decrypt(userKey, alfabetas, rev_alfabetas, data, userFile):
-    data_ready = "".join(rev_alfabetas[0][alfabetas[key][char]]for char, key in zip(data, cycle(userKey)))
-    with open(userFile.removesuffix(".yagbu"), "wb") as file:
-        file.write(bytes.fromhex(data_ready))
-    file = Path(userFile)
+def decrypt(user_key, alfabetas, rev_alfabetas, user_file):
+    key_iter = cycle(user_key)
+    with open(user_file, "rb") as file_in, open(user_file.removesuffix(".yagbu"), "wb") as file_out:
+        while data_chunk := file_in.read(DATA_CHUNKS):
+            data_ready = "".join(rev_alfabetas[0][alfabetas[key][value]]for value, key in zip(data_chunk.hex(), key_iter))
+            file_out.write(bytes.fromhex(data_ready))
+    file = Path(user_file)
     if file.exists():
         file.unlink()
 
-def read_file(userFile):
-    with open(userFile, "rb") as file:
-        return file.read().hex()
-
-def key_gen(userSeed):
+def key_gen(user_seed):
     base = list('''0123456789abcdef''')
     alfabetas, rev_alfabetas = [], []
     dict_alfabeta = {key: item for item, key in enumerate(base)}
@@ -127,7 +90,7 @@ def key_gen(userSeed):
     rev_alfabetas.append({key: item for item, key in dict_alfabeta.items()})
     for i in range(9):
         chars = base.copy()
-        seedset = random.Random(int(userSeed)+i)
+        seedset = random.Random(int(user_seed)+i)
         seedset.shuffle(chars)
         dict_alfabeta = {key: item for item, key in enumerate(chars)}
         alfabetas.append(dict_alfabeta)
