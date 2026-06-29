@@ -6,7 +6,7 @@ DATA_CHUNKS = 8 * 1024 * 1024
 def main():
     print("\n# # # # # # # # # # # # # # # # # # # # # # # # # # # # #")
     print("#                                                       #")
-    print("#                      Yagbu v1.1.0                     #")
+    print("#                      Yagbu v1.1.1                     #")
     print("#                                                       #")
     print("#   Please select among available options below (1-3):  #")
     print("#                                                       #")
@@ -27,20 +27,20 @@ def main():
     if user_choice == 1:
         if encrypt(user_key, alfabetas, rev_alfabetas, user_file) == True:
             credits()
-            clean_up(user_file, True)
+            clean_up(user_file, 1)
             print(f'''Encryption complete. Please check "{user_file}.yagbu"\n''')
         else:
             credits()
-            clean_up(user_file, False)
+            clean_up(user_file, 2)
             print("There has been a problem while encrypting. Encryption aborted.\n")
     elif user_choice == 2:
         if decrypt(user_key, alfabetas, rev_alfabetas, user_file) == True:
             credits()
-            clean_up(user_file, True)
+            clean_up(user_file, 1)
             print(f'''Decryption complete. Please check "{user_file.removesuffix(".yagbu")}"\n''')
         else:
             credits()
-            clean_up(user_file, False)
+            clean_up(user_file, 3)
             print("There has been a problem while decrypting. Decrypting aborted.\n")
     input("Have a great day! Please press enter to exit the program...")
 
@@ -75,9 +75,10 @@ def get_user_seed_and_key():
 def encrypt(user_key, alfabetas, rev_alfabetas, user_file):
     try:
         key_iter = cycle(user_key)
+        alfabeta0 = alfabetas[0]
         with open(user_file, "rb") as file_in, open(f"{user_file}.yagbu", "wb") as file_out:
             while data_chunk := file_in.read(DATA_CHUNKS):
-                data_ready = "".join(rev_alfabetas[next(key_iter)][alfabetas[0][value]]for value in data_chunk.hex())
+                data_ready = "".join(rev_alfabetas[next(key_iter)][alfabeta0[value]]for value in data_chunk.hex())
                 file_out.write(bytes.fromhex(data_ready))
     except:
         return False
@@ -87,9 +88,10 @@ def encrypt(user_key, alfabetas, rev_alfabetas, user_file):
 def decrypt(user_key, alfabetas, rev_alfabetas, user_file):
     try:
         key_iter = cycle(user_key)
+        rev_alfabeta0 = rev_alfabetas[0]
         with open(user_file, "rb") as file_in, open(user_file.removesuffix(".yagbu"), "wb") as file_out:
             while data_chunk := file_in.read(DATA_CHUNKS):
-                data_ready = "".join(rev_alfabetas[0][alfabetas[next(key_iter)][value]]for value in data_chunk.hex())
+                data_ready = "".join(rev_alfabeta0[alfabetas[next(key_iter)][value]]for value in data_chunk.hex())
                 file_out.write(bytes.fromhex(data_ready))
     except:
         return False
@@ -112,12 +114,16 @@ def key_gen(user_seed):
     return tuple(alfabetas), tuple(rev_alfabetas)
 
 def clean_up(user_file, option):
-    if option == True:
+    if option == 1:
         file = Path(user_file)
         if file.exists():
             file.unlink()
-    else:
+    elif option == 2:
         file = Path(f"{user_file}.yagbu")
+        if file.exists():
+            file.unlink()
+    else:
+        file = Path(f"{user_file.removesuffix(".yagbu")}")
         if file.exists():
             file.unlink()
 
