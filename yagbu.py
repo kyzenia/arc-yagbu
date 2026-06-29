@@ -1,12 +1,12 @@
 import random
 from pathlib import Path
 from itertools import cycle
-DATA_CHUNKS = 8 * 1024 * 1024
+DATA_CHUNKS = 1 * 64 * 1024
 
 def main():
     print("\n# # # # # # # # # # # # # # # # # # # # # # # # # # # # #")
     print("#                                                       #")
-    print("#                      Yagbu v1.1.1                     #")
+    print("#                      Yagbu v1.2.0                     #")
     print("#                                                       #")
     print("#   Please select among available options below (1-3):  #")
     print("#                                                       #")
@@ -73,27 +73,39 @@ def get_user_seed_and_key():
             print("\nPlease enter a valid seed/key!\n")
 
 def encrypt(user_key, alfabetas, rev_alfabetas, user_file):
+    CHUNK = DATA_CHUNKS
+    hex_from_bytes = bytes.hex
+    bytes_from_hex = bytes.fromhex
+    alfabeta0 = alfabetas[0]
+    rev = rev_alfabetas
+    key_iter = cycle(user_key)
     try:
-        key_iter = cycle(user_key)
-        alfabeta0 = alfabetas[0]
         with open(user_file, "rb") as file_in, open(f"{user_file}.yagbu", "wb") as file_out:
-            while data_chunk := file_in.read(DATA_CHUNKS):
-                data_ready = "".join(rev_alfabetas[next(key_iter)][alfabeta0[value]]for value in data_chunk.hex())
-                file_out.write(bytes.fromhex(data_ready))
-    except:
+            read = file_in.read
+            write = file_out.write
+            while data_chunk := read(CHUNK):
+                data_ready = "".join(rev[next(key_iter)][alfabeta0[value]]for value in hex_from_bytes(data_chunk))
+                write(bytes_from_hex(data_ready))
+    except KeyboardInterrupt:
         return False
     else:
         return True
 
 def decrypt(user_key, alfabetas, rev_alfabetas, user_file):
+    CHUNK = DATA_CHUNKS
+    hex_from_bytes = bytes.hex
+    bytes_from_hex = bytes.fromhex
+    rev_alfabeta0 = rev_alfabetas[0]
+    alfabe = alfabetas
+    key_iter = cycle(user_key)
     try:
-        key_iter = cycle(user_key)
-        rev_alfabeta0 = rev_alfabetas[0]
         with open(user_file, "rb") as file_in, open(user_file.removesuffix(".yagbu"), "wb") as file_out:
-            while data_chunk := file_in.read(DATA_CHUNKS):
-                data_ready = "".join(rev_alfabeta0[alfabetas[next(key_iter)][value]]for value in data_chunk.hex())
-                file_out.write(bytes.fromhex(data_ready))
-    except:
+            read = file_in.read
+            write = file_out.write
+            while data_chunk := read(CHUNK):
+                data_ready = "".join(rev_alfabeta0[alfabe[next(key_iter)][value]]for value in hex_from_bytes(data_chunk))
+                write(bytes_from_hex(data_ready))
+    except KeyboardInterrupt:
         return False
     else:
         return True
