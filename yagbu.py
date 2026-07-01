@@ -1,12 +1,12 @@
 import random
 from pathlib import Path
 from itertools import cycle
-DATA_CHUNKS = 1024 * 1024
+DATA_CHUNKS = 8 * 1024 * 1024
 
 def main():
     print("\n# # # # # # # # # # # # # # # # # # # # # # # # # # # # #")
     print("#                                                       #")
-    print("#                   Yagbu v2.0.0-rc1                    #")
+    print("#                      Yagbu v2.0.0                     #")
     print("#                                                       #")
     print("#   Please select among available options below (1-3):  #")
     print("#                                                       #")
@@ -44,7 +44,7 @@ def main():
             credits()
             clean_up(user_file, 3)
             print("There has been a problem while decrypting. Decrypting aborted.\n")
-    #input("Have a great day! Please press enter to exit the program...")
+    input("Have a great day! Please press enter to exit the program...")
 
 def get_user_choice():
     while True:
@@ -76,39 +76,41 @@ def get_user_seed_and_key():
 
 def encrypt(user_key, tables, user_file):
     CHUNK = DATA_CHUNKS
-    table = tables
-    key = user_key
-    key_iter = cycle(key)
+    key = tuple(user_key)
+    len_key = len(key)
+    key_pos = 0
     try:
         with open(user_file, "rb") as file_in, open(f"{user_file}.yagbu", "wb") as file_out:
             read = file_in.read
             write = file_out.write
             while data_chunk := read(CHUNK):
                 data_ready = bytearray(len(data_chunk))
-                for i, byte in enumerate(data_chunk):
-                    k = next(key_iter)
-                    data_ready[i] = table[k][byte]
+                for slices in range(len_key):
+                    digit = key[(key_pos + slices) % len_key]
+                    data_ready[slices::len_key] = (data_chunk[slices::len_key].translate(tables[digit]))
                 write(data_ready)
+                key_pos = (key_pos + len(data_chunk)) % len_key
     except KeyboardInterrupt:
         return False
     else:
         return True
-    
+
 def decrypt(user_key, tables, user_file):
     CHUNK = DATA_CHUNKS
-    table = tables
-    key = user_key
-    key_iter = cycle(key)
+    key = tuple(user_key)
+    len_key = len(key)
+    key_pos = 0
     try:
         with open(user_file, "rb") as file_in, open(user_file.removesuffix(".yagbu"), "wb") as file_out:
             read = file_in.read
             write = file_out.write
             while data_chunk := read(CHUNK):
                 data_ready = bytearray(len(data_chunk))
-                for i, byte in enumerate(data_chunk):
-                    k = next(key_iter)
-                    data_ready[i] = table[k][byte]
+                for slices in range(len_key):
+                    digit = key[(key_pos + slices) % len_key]
+                    data_ready[slices::len_key] = (data_chunk[slices::len_key].translate(tables[digit]))
                 write(data_ready)
+                key_pos = (key_pos + len(data_chunk)) % len_key
     except KeyboardInterrupt:
         return False
     else:

@@ -1,4 +1,4 @@
-(As of v1.0.0, Keep in mind that although the resource usage is not a problem anymore, dealing with big files takes some time.)
+(As of v2.0.0, previous versions are not compatible from now on and vice versa.)
 
 INSTRUCTIONS:
 
