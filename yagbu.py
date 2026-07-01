@@ -1,12 +1,12 @@
 import random
 from pathlib import Path
 from itertools import cycle
-DATA_CHUNKS = 16 * 1024
+DATA_CHUNKS = 1024 * 1024
 
 def main():
     print("\n# # # # # # # # # # # # # # # # # # # # # # # # # # # # #")
     print("#                                                       #")
-    print("#                      Yagbu v1.2.1                     #")
+    print("#                   Yagbu v2.0.0-rc1                    #")
     print("#                                                       #")
     print("#   Please select among available options below (1-3):  #")
     print("#                                                       #")
@@ -25,7 +25,8 @@ def main():
     user_seed, user_key = get_user_seed_and_key()
     alfabetas, rev_alfabetas = key_gen(user_seed)
     if user_choice == 1:
-        if encrypt(user_key, alfabetas, rev_alfabetas, user_file) == True:
+        tables = encrypt_table_gen(alfabetas, rev_alfabetas)
+        if encrypt(user_key, tables, user_file) == True:
             credits()
             clean_up(user_file, 1)
             print(f'''Encryption complete. Please check "{user_file}.yagbu"\n''')
@@ -34,15 +35,16 @@ def main():
             clean_up(user_file, 2)
             print("There has been a problem while encrypting. Encryption aborted.\n")
     elif user_choice == 2:
-        if decrypt(user_key, alfabetas, rev_alfabetas, user_file) == True:
+        tables = decrypt_table_gen(alfabetas, rev_alfabetas)
+        if decrypt(user_key, tables, user_file) == True:
             credits()
             clean_up(user_file, 1)
-            print(f'''Decryption complete. Please check "{user_file.removesuffix(".yagbu")}"\n''')
+            print(f'''Decryption complete. Please check "{user_file.removesuffix('.yagbu')}"\n''')
         else:
             credits()
             clean_up(user_file, 3)
             print("There has been a problem while decrypting. Decrypting aborted.\n")
-    input("Have a great day! Please press enter to exit the program...")
+    #input("Have a great day! Please press enter to exit the program...")
 
 def get_user_choice():
     while True:
@@ -72,12 +74,9 @@ def get_user_seed_and_key():
         except ValueError:
             print("\nPlease enter a valid seed/key!\n")
 
-def encrypt(user_key, alfabetas, rev_alfabetas, user_file):
+def encrypt(user_key, tables, user_file):
     CHUNK = DATA_CHUNKS
-    hex_from_bytes = bytes.hex
-    bytes_from_hex = bytes.fromhex
-    alfabeta0 = alfabetas[0]
-    rev = rev_alfabetas
+    table = tables
     key = user_key
     key_iter = cycle(key)
     try:
@@ -85,23 +84,19 @@ def encrypt(user_key, alfabetas, rev_alfabetas, user_file):
             read = file_in.read
             write = file_out.write
             while data_chunk := read(CHUNK):
-                hex_data_chunk = hex_from_bytes(data_chunk)
-                data_ready = []
-                append = data_ready.append
-                for value in hex_data_chunk:
-                    append(rev[next(key_iter)][alfabeta0[value]])
-                write(bytes_from_hex("".join(data_ready)))
+                data_ready = bytearray(len(data_chunk))
+                for i, byte in enumerate(data_chunk):
+                    k = next(key_iter)
+                    data_ready[i] = table[k][byte]
+                write(data_ready)
     except KeyboardInterrupt:
         return False
     else:
         return True
-
-def decrypt(user_key, alfabetas, rev_alfabetas, user_file):
+    
+def decrypt(user_key, tables, user_file):
     CHUNK = DATA_CHUNKS
-    hex_from_bytes = bytes.hex
-    bytes_from_hex = bytes.fromhex
-    rev_alfabeta0 = rev_alfabetas[0]
-    alfabe = alfabetas
+    table = tables
     key = user_key
     key_iter = cycle(key)
     try:
@@ -109,31 +104,52 @@ def decrypt(user_key, alfabetas, rev_alfabetas, user_file):
             read = file_in.read
             write = file_out.write
             while data_chunk := read(CHUNK):
-                hex_data_chunk = hex_from_bytes(data_chunk)
-                data_ready = []
-                append = data_ready.append
-                for value in hex_data_chunk:
-                    append(rev_alfabeta0[alfabe[next(key_iter)][value]])
-                write(bytes_from_hex("".join(data_ready)))
+                data_ready = bytearray(len(data_chunk))
+                for i, byte in enumerate(data_chunk):
+                    k = next(key_iter)
+                    data_ready[i] = table[k][byte]
+                write(data_ready)
     except KeyboardInterrupt:
         return False
     else:
         return True
 
 def key_gen(user_seed):
-    base = list('''0123456789abcdef''')
+    alfabeta = list(range(256))
     alfabetas, rev_alfabetas = [], []
-    dict_alfabeta = {key: item for item, key in enumerate(base)}
-    alfabetas.append(dict_alfabeta)
-    rev_alfabetas.append({key: item for item, key in dict_alfabeta.items()})
+    ab_dict = {key: value for value, key in enumerate(alfabeta)}
+    rev_ab_dict = {key: value for value, key in ab_dict.items()}
+    alfabetas.append(ab_dict)
+    rev_alfabetas.append(rev_ab_dict)
     for i in range(9):
-        chars = base.copy()
-        seedset = random.Random(int(user_seed)+i)
+        chars = alfabeta.copy()
+        seedset = random.Random((user_seed)+i)
         seedset.shuffle(chars)
-        dict_alfabeta = {key: item for item, key in enumerate(chars)}
-        alfabetas.append(dict_alfabeta)
-        rev_alfabetas.append({key: item for item, key in dict_alfabeta.items()})
+        ab_dict = {key: value for value, key in enumerate(chars)}
+        rev_ab_dict = {key: value for value, key in ab_dict.items()}
+        alfabetas.append(ab_dict)
+        rev_alfabetas.append(rev_ab_dict)
     return tuple(alfabetas), tuple(rev_alfabetas)
+
+def encrypt_table_gen(alfabetas, rev_alfabetas):
+    tables = []
+    ab_0 = alfabetas[0]
+    for k in range(10):
+        table = bytearray(256)
+        for byte in range(256):
+            table[byte] = rev_alfabetas[k][ab_0[byte]]
+        tables.append(bytes(table))
+    return tuple(tables)
+
+def decrypt_table_gen(alfabetas, rev_alfabetas):
+    tables = []
+    rev_ab_0 = rev_alfabetas[0]
+    for k in range(10):
+        table = bytearray(256)
+        for byte in range(256):
+            table[byte] = rev_ab_0[alfabetas[k][byte]]
+        tables.append(bytes(table))
+    return tuple(tables)
 
 def clean_up(user_file, option):
     if option == 1:
@@ -145,7 +161,7 @@ def clean_up(user_file, option):
         if file.exists():
             file.unlink()
     else:
-        file = Path(f"{user_file.removesuffix(".yagbu")}")
+        file = Path(f"{user_file.removesuffix('.yagbu')}")
         if file.exists():
             file.unlink()
 
