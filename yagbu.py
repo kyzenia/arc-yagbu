@@ -1,12 +1,11 @@
 import random
 from pathlib import Path
-from itertools import cycle
 DATA_CHUNKS = 8 * 1024 * 1024
 
 def main():
     print("\n# # # # # # # # # # # # # # # # # # # # # # # # # # # # #")
     print("#                                                       #")
-    print("#                      Yagbu v2.0.0                     #")
+    print("#                      Yagbu v2.1.0                     #")
     print("#                                                       #")
     print("#   Please select among available options below (1-3):  #")
     print("#                                                       #")
@@ -21,7 +20,7 @@ def main():
         credits()
         input("Have a great day!\nPlease press enter to exit the program...")
         return
-    user_file = get_user_file(choice_encrypt=(user_choice == 1))
+    user_file = get_user_file()
     user_seed, user_key = get_user_seed_and_key()
     alfabetas, rev_alfabetas = key_gen(user_seed)
     if user_choice == 1:
@@ -56,11 +55,9 @@ def get_user_choice():
             pass
         print("\nPlease enter a valid selection!\n")
 
-def get_user_file(choice_encrypt):
+def get_user_file():
     while True:
         user_file = input("Enter your file's full name: ").strip()
-        if not choice_encrypt:
-            user_file += ".yagbu"
         if Path(user_file).exists():
             return user_file
         print("\nFile not found! Check the file name.\n")
@@ -80,7 +77,7 @@ def encrypt(user_key, tables, user_file):
     len_key = len(key)
     key_pos = 0
     try:
-        with open(user_file, "rb") as file_in, open(f"{user_file}.yagbu", "wb") as file_out:
+        with open(user_file, "rb") as file_in, open(f"{user_file.split(".", 1)[0]}.yagbu", "wb") as file_out:
             read = file_in.read
             write = file_out.write
             while data_chunk := read(CHUNK):
